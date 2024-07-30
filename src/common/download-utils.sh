@@ -74,7 +74,7 @@ _common_stuff() {
 
                 confirm_string="$(_tmp="$(grep -F 'download_warning' "${TMPFILE}_${file_id_download_file}_COOKIE")" && printf "%s\n" "${_tmp##*"$(printf '\t')"}")" || :
                 # https://github.com/Akianonymus/gdrive-downloader/issues/37
-                # sometimes the url doesn't return a proper cookie
+                # sometimes the url doesnt return a proper cookie
                 # so try to parse the html output and get the confirm string
                 [ -z "${confirm_string}" ] && {
                     confirm_string="$(_tmp="$(grep -Eo "export=download.*${file_id_download_file}.*confirm=\w+" "${TMPFILE}_${file_id_download_file}_misc")" && printf "%s\n" "${_tmp##*=}")"
@@ -351,10 +351,11 @@ ${json_search_fragment_fetch_folderinfo}"
 
     # parse the fetched json and make a list containing files size, name, id and mimeType
     "${EXTRA_LOG}" "justify" "Preparing files list.." "="
-    files_id_fetch_folderinfo="$(printf "%s\n" "${json_search_fetch_folderinfo}" | _json_value id all all)" || :
-    files_size_fetch_folderinfo="$(printf "%s\n" "${json_search_fetch_folderinfo}" | _json_value size all all)" || :
-    files_name_fetch_folderinfo="$(printf "%s\n" "${json_search_fetch_folderinfo}" | _json_value name all all)" || :
-    files_mime_fetch_folderinfo="$(printf "%s\n" "${json_search_fetch_folderinfo}" | _json_value mimeType all all)" || :
+    files_folderinfo=$(printf "%s\n" "$json_search_fetch_folderinfo" | jq '.files[] | select(.mimeType != "application/vnd.google-apps.folder")')
+    files_id_fetch_folderinfo="$(printf "%s\n" "${files_folderinfo}" | _json_value id all all)" || :
+    files_size_fetch_folderinfo="$(printf "%s\n" "${files_folderinfo}" | _json_value size all all)" || :
+    files_name_fetch_folderinfo="$(printf "%s\n" "${files_folderinfo}" | _json_value name all all)" || :
+    files_mime_fetch_folderinfo="$(printf "%s\n" "${files_folderinfo}" | _json_value mimeType all all)" || :
 
     chmod +w+r -- "${files_list_fetch_folderinfo}"
     exec 5<< EOF
@@ -384,8 +385,9 @@ EOF
 
     # parse the fetched json and make a list containing sub folders name and id
     "${EXTRA_LOG}" "justify" "Preparing sub folders list.." "="
-    folders_id_fetch_folderinfo="$(printf "%s\n" "${json_search_fetch_folderinfo}" | grep '"mimeType":.*folder.*' -B2 | _json_value id all all)" || :
-    folders_name_fetch_folderinfo="$(printf "%s\n" "${json_search_fetch_folderinfo}" | grep '"mimeType":.*folder.*' -B1 | _json_value name all all)" || :
+    folders_folderinfo=$(printf "%s\n" "$json_search_fetch_folderinfo" | jq '.files[] | select(.mimeType == "application/vnd.google-apps.folder")')
+    folders_id_fetch_folderinfo="$(printf "%s\n" "${folders_folderinfo}" | _json_value id all all)" || :
+    folders_name_fetch_folderinfo="$(printf "%s\n" "${folders_folderinfo}" | _json_value name all all)" || :
 
     chmod +w+r -- "${folders_list_fetch_folderinfo}"
     exec 5<< EOF
